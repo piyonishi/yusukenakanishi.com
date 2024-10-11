@@ -4,7 +4,8 @@
 	"type": "module",
 	"scripts": {
 		"start": "bun index.ts",
-		"dev": "bun --watch index.ts"
+		"dev": "bun --watch index.ts",
+    "lint": "npx @biomejs/biome format --write"
 	},
 	"devDependencies": {
 		"@types/bun": "latest"
