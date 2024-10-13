@@ -1,22 +1,20 @@
 {
-  "name": "app",
-  "module": "index.ts",
-  "type": "module",
+  "name": "yusukenakanishicom",
+  "version": "0.0.1",
+  "description": "My personal blog project",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "start": "bun index.ts",
-    "dev": "bun --watch index.ts",
-    "lint": "npx @biomejs/biome format --write"
+    "dev:frontend": "bun run --cwd frontend dev",
+    "dev:backend": "bun run --cwd backend dev",
+    "lint": "biome lint .",
+    "format": "biome format . --write",
+    "check": "biome check --write ."
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.3",
     "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
-  },
-  "dependencies": {
-    "@hono/zod-validator": "^0.4.1",
-    "hono": "^4.6.4",
-    "zod": "^3.23.8"
   }
 }
