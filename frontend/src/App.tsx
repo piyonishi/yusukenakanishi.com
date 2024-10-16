@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import viteLogo from '/vite.svg';
 import reactLogo from './assets/react.svg';
-import './App.css';
+import { Button } from "@/components/ui/button";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -18,12 +18,9 @@ function App() {
       </div>
       <h1>Vite + React</h1>
       <div className="card">
-        <button type="button" onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
+        <Button size={"sm"} onClick={() => setCount((count) => count + 1)} className="mr-1">UP</Button>
+        <Button size={"sm"} onClick={() => setCount((count) => count - 1)}>DOWN</Button>
+        <p>count is {count}</p>
       </div>
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more
