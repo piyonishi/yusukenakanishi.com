@@ -1,0 +1,20 @@
+{
+  "name": "yusukenakanishicom",
+  "version": "0.0.1",
+  "description": "My personal blog project",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev:frontend": "bun run --cwd frontend dev",
+    "dev:backend": "bun run --cwd backend dev",
+    "lint": "biome lint .",
+    "format": "biome format . --write",
+    "check": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.3",
+    "@types/bun": "latest"
+  }
+}
