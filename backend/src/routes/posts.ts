@@ -2,13 +2,17 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
+interface Post {
+  id: number;
+  title: string;
+  content: string;
+}
+
 const postSchema = z.object({
   id: z.number().int().positive().min(1),
   title: z.string().min(3).max(50),
   content: z.string(),
-});
-
-type Post = z.infer<typeof postSchema>;
+}) satisfies z.ZodType<Post>;
 
 const createPostSchema = postSchema.omit({ id: true });
 
