@@ -37,6 +37,9 @@
         "useShorthandArrayType": "error",
         "useTemplate": "error",
         "noParameterAssign": "error"
+      },
+      "a11y": {
+        "noBlankTarget": "off"
       }
     }
   },

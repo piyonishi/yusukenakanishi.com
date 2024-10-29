@@ -21,10 +21,10 @@ function App() {
           <CardTitle>Total value</CardTitle>
           <CardDescription className="flex">
             Total value of counter.
-            <a href="https://vitejs.dev" target="_blank" rel="noreferrer">
+            <a href="https://vitejs.dev" target="_blank">
               <img src={viteLogo} className="inline-block ml-2" alt="Vite logo" width={14} />
             </a>
-            <a href="https://react.dev" target="_blank" rel="noreferrer">
+            <a href="https://react.dev" target="_blank">
               <img src={reactLogo} className="inline-block ml-1" alt="React logo" width={14} />
             </a>
           </CardDescription>
