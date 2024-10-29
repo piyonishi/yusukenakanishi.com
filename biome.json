@@ -23,16 +23,20 @@
     "rules": {
       "recommended": true,
       "correctness": {
-        "noUnusedVariables": "error"
+        "noUnusedVariables": "error",
+        "noUndeclaredVariables": "error",
+        "useExhaustiveDependencies": "error"
       },
       "suspicious": {
-        "noExplicitAny": "warn"
+        "noExplicitAny": "warn",
+        "noFallthroughSwitchClause": "error"
       },
       "style": {
         "useConst": "error",
         "useBlockStatements": "error",
         "useShorthandArrayType": "error",
-        "useTemplate": "error"
+        "useTemplate": "error",
+        "noParameterAssign": "error"
       }
     }
   },
@@ -40,7 +44,8 @@
     "formatter": {
       "quoteStyle": "single",
       "trailingCommas": "es5"
-    }
+    },
+    "globals": ["Bun"]
   },
   "json": {
     "parser": {
