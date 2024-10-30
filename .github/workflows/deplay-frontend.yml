@@ -30,11 +30,19 @@ jobs:
 
       - name: Install Dependencies
         run: bun install
-
+        
+      - name: Check directory structure
+        run: ls -la
+        
       - name: Build
-        run: bun run build
+        run: |
+          echo "Starting build process..."
+          bun run build
+          echo "Build completed"
+          ls -la dist
         env:
           NODE_ENV: production
+          CI: false
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
@@ -42,4 +50,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: yusukenakanishicom
-          directory: frontend/dist
+          directory: dist
+          branch: main
