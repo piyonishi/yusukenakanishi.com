@@ -1,0 +1,84 @@
+name: Code Quality
+
+on:
+  push:
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'biome.json'
+      - '.github/workflows/code-quality.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'biome.json'
+      - '.github/workflows/code-quality.yml'
+
+jobs:
+  setup:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.value }}
+    
+    steps:
+      - name: Generate cache key
+        id: cache-key
+        run: echo "value=$(date -u '+%Y-%m')" >> $GITHUB_OUTPUT
+
+  lint:
+    needs: setup
+    name: Lint Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [frontend, backend]
+      # 1つのlintが失敗しても他方は実行を継続
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ matrix.app }}-${{ needs.setup.outputs.cache-key }}-${{ hashFiles(format('{0}/bun.lockb', matrix.app)) }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ matrix.app }}-${{ needs.setup.outputs.cache-key }}-
+            ${{ runner.os }}-bun-${{ matrix.app }}-
+
+      - name: Install dependencies
+        working-directory: ./${{ matrix.app }}
+        run: bun install
+
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+
+      - name: Run all checks
+        run: biome check ./${{ matrix.app }}/src
+
+      # オプション: チェック結果をPRにコメントとして追加
+      - name: Add PR Comment
+        if: github.event_name == 'pull_request' && failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `### ❌ ${{ matrix.app }} Lint Check Failed
+            
+            Please fix the lint issues in the ${{ matrix.app }} directory.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
