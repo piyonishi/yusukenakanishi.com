@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import reactLogo from './assets/react.svg';
 import {
   Card,
   CardContent,
@@ -8,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { useEffect, useState } from 'react';
-import reactLogo from './assets/react.svg';
+
 import viteLogo from '/vite.svg';
 
 function App() {
