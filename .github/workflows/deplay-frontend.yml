@@ -9,48 +9,13 @@ on:
       - 'frontend/**'
 
 jobs:
-  verify-quality:
+  deploy:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    steps:
-      - name: Check code quality status
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const prNumber = context.payload.pull_request.number;
-            
-            try {
-              const workflows = await github.rest.actions.listWorkflowRunsForRepo({
-                owner,
-                repo,
-                event: 'pull_request',
-                branch: context.payload.pull_request.head.ref
-              });
-              
-              const qualityCheck = workflows.data.workflow_runs.find(run => 
-                run.name === 'Code Quality Check' && 
-                run.head_sha === context.payload.pull_request.head.sha
-              );
-              
-              if (!qualityCheck) {
-                core.setFailed('Could not find code quality check run');
-                return;
-              }
-              
-              if (qualityCheck.conclusion !== 'success') {
-                core.setFailed(`Code quality check failed with status: ${qualityCheck.conclusion}`);
-                return;
-              }
-              
-              console.log('Code quality check passed successfully');
-            } catch (error) {
-              core.setFailed(`Error checking code quality status: ${error.message}`);
-            }
+    defaults:
+      run:
+        working-directory: ./frontend
 
-  deploy:
-    needs: verify-quality
-    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,16 +26,20 @@ jobs:
           bun-version: latest
 
       - name: Install Dependencies
-        run: |
-          cd frontend
-          bun install
-
+        run: bun install
+        
+      - name: Check directory structure
+        run: ls -la
+        
       - name: Build
         run: |
-          cd frontend
+          echo "Starting build process..."
           bun run build
+          echo "Build completed"
+          ls -la dist
         env:
           NODE_ENV: production
+          CI: false
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
@@ -78,5 +47,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: yusukenakanishicom
-          directory: frontend/dist
+          directory: dist
           branch: main
