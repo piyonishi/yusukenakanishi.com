@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write  # PRにコメントを付けるための権限
+      pull-requests: write
 
     steps:
       - name: Checkout
@@ -34,19 +34,19 @@ jobs:
         run: |
           cd frontend
           bun run lint
-        continue-on-error: true  # エラーがあってもジョブを続行
+          echo "::set-output name=status::success"
+        continue-on-error: true
 
       - name: Comment PR
         uses: actions/github-script@v7
-        if: always()
         with:
           script: |
-            const lintOutcome = steps.lint.outcome;
-            const message = lintOutcome === 'success' 
+            const status = '${{ steps.lint.outcome }}';
+            const message = status === 'success' 
               ? '✅ Code quality checks passed!' 
               : '❌ Code quality checks failed. Please fix the issues.';
             
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.name,

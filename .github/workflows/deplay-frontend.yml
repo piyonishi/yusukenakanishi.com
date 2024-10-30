@@ -20,20 +20,32 @@ jobs:
             const { owner, repo } = context.repo;
             const prNumber = context.payload.pull_request.number;
             
-            const workflows = await github.rest.actions.listWorkflowRunsForRepo({
-              owner,
-              repo,
-              event: 'pull_request',
-              branch: 'main'
-            });
-            
-            const qualityCheck = workflows.data.workflow_runs.find(run => 
-              run.name === 'Code Quality Check' && 
-              run.head_sha === context.payload.pull_request.head.sha
-            );
-            
-            if (!qualityCheck || qualityCheck.conclusion !== 'success') {
-              core.setFailed('Code quality checks must pass before deployment');
+            try {
+              const workflows = await github.rest.actions.listWorkflowRunsForRepo({
+                owner,
+                repo,
+                event: 'pull_request',
+                branch: context.payload.pull_request.head.ref
+              });
+              
+              const qualityCheck = workflows.data.workflow_runs.find(run => 
+                run.name === 'Code Quality Check' && 
+                run.head_sha === context.payload.pull_request.head.sha
+              );
+              
+              if (!qualityCheck) {
+                core.setFailed('Could not find code quality check run');
+                return;
+              }
+              
+              if (qualityCheck.conclusion !== 'success') {
+                core.setFailed(`Code quality check failed with status: ${qualityCheck.conclusion}`);
+                return;
+              }
+              
+              console.log('Code quality check passed successfully');
+            } catch (error) {
+              core.setFailed(`Error checking code quality status: ${error.message}`);
             }
 
   deploy:
@@ -65,6 +77,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: your-project-name
+          projectName: yusukenakanishicom
           directory: frontend/dist
           branch: main
