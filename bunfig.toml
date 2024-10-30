@@ -1,4 +1,3 @@
 [install]
 cache = true
 frozen-lockfile = true
-cache-dir = ".bun/cache"
