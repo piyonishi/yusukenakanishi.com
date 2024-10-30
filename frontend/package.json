@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bunx --bun vite",
     "build": "bunx --bun vite build",
-    "preview": "vite preview"
+    "preview": "bunx --bun vite preview",
+    "preview-wrangler": "wrangler pages dev ./dist"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.0",
