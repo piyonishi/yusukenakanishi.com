@@ -9,30 +9,42 @@ on:
       - '.github/workflows/code-quality.yml'
 
 jobs:
-  setup:
-    name: Setup Environment
+  detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      cache-key: ${{ steps.cache-key.outputs.value }}
-    
+      frontend: ${{ steps.changes.outputs.frontend }}
+      backend: ${{ steps.changes.outputs.backend }}
     steps:
-      - name: Generate cache key
-        id: cache-key
-        run: echo "value=$(date -u '+%Y-%m')" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
-  lint:
-    needs: setup
-    name: Lint Check
+      - name: Check for changes
+        id: changes
+        run: |
+          echo "frontend=$(git diff --name-only HEAD^ HEAD | grep -q '^frontend/' && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          echo "backend=$(git diff --name-only HEAD^ HEAD | grep -q '^backend/' && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+
+      - name: Print change status
+        run: |
+          if [[ $(git diff --name-only HEAD^ HEAD | grep -q '^frontend/' && echo 'true' || echo 'false') == 'true' ]]; then
+            echo "🔍 Frontend changes detected"
+          else
+            echo "⏭️ No frontend changes - lint check will be skipped"
+          fi
+          
+          if [[ $(git diff --name-only HEAD^ HEAD | grep -q '^backend/' && echo 'true' || echo 'false') == 'true' ]]; then
+            echo "🔍 Backend changes detected"
+          else
+            echo "⏭️ No backend changes - lint check will be skipped"
+          fi
+
+  frontend-lint:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        app: [frontend, backend]
-      # 1つのlintが失敗しても他方は実行を継続
-      fail-fast: false
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -43,13 +55,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ matrix.app }}-${{ needs.setup.outputs.cache-key }}-${{ hashFiles(format('{0}/bun.lockb', matrix.app)) }}
+          key: ${{ runner.os }}-bun-frontend-${{ hashFiles('frontend/bun.lockb') }}
           restore-keys: |
-            ${{ runner.os }}-bun-${{ matrix.app }}-${{ needs.setup.outputs.cache-key }}-
-            ${{ runner.os }}-bun-${{ matrix.app }}-
+            ${{ runner.os }}-bun-frontend-
 
       - name: Install dependencies
-        working-directory: ./${{ matrix.app }}
+        working-directory: ./frontend
         run: bun install
 
       - name: Setup Biome
@@ -57,22 +68,70 @@ jobs:
         with:
           version: latest
 
-      - name: Run all checks
-        run: biome check ./${{ matrix.app }}/src
+      - name: Run frontend checks
+        run: biome check ./frontend/src
 
-      # オプション: チェック結果をPRにコメントとして追加
-      - name: Add PR Comment
-        if: github.event_name == 'pull_request' && failure()
-        uses: actions/github-script@v7
+  backend-lint:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          script: |
-            const output = `### ❌ ${{ matrix.app }} Lint Check Failed
-            
-            Please fix the lint issues in the ${{ matrix.app }} directory.`;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
+          bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-backend-${{ hashFiles('backend/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-backend-
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: bun install
+
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+
+      - name: Run backend checks
+        run: biome check ./backend/src
+
+  summary:
+    needs: [detect-changes, frontend-lint, backend-lint]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print workflow summary
+        run: |
+          echo "### Lint Check Summary 📊" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ '${{ needs.detect-changes.outputs.frontend }}' == 'true' ]]; then
+            if [[ '${{ needs.frontend-lint.result }}' == 'success' ]]; then
+              echo "- ✅ Frontend lint check passed" >> $GITHUB_STEP_SUMMARY
+            elif [[ '${{ needs.frontend-lint.result }}' == 'failure' ]]; then
+              echo "- ❌ Frontend lint check failed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ⚠️ Frontend lint check skipped or canceled" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ⏭️ Frontend lint check skipped (no changes)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ '${{ needs.detect-changes.outputs.backend }}' == 'true' ]]; then
+            if [[ '${{ needs.backend-lint.result }}' == 'success' ]]; then
+              echo "- ✅ Backend lint check passed" >> $GITHUB_STEP_SUMMARY
+            elif [[ '${{ needs.backend-lint.result }}' == 'failure' ]]; then
+              echo "- ❌ Backend lint check failed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ⚠️ Backend lint check skipped or canceled" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ⏭️ Backend lint check skipped (no changes)" >> $GITHUB_STEP_SUMMARY
+          fi
