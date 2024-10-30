@@ -7,61 +7,38 @@ on:
       - 'backend/**'
       - 'biome.json'
       - '.github/workflows/code-quality.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'biome.json'
+      - '.github/workflows/code-quality.yml'
 
 jobs:
-  detect-changes:
+  setup:
+    name: Setup Environment
     runs-on: ubuntu-latest
     outputs:
-      frontend: ${{ steps.check.outputs.frontend }}
-      backend: ${{ steps.check.outputs.backend }}
+      cache-key: ${{ steps.cache-key.outputs.value }}
+    
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
+      - name: Generate cache key
+        id: cache-key
+        run: echo "value=$(date -u '+%Y-%m')" >> $GITHUB_OUTPUT
 
-      # 前回の実行結果を取得
-      - name: Download previous workflow status
-        uses: dawidd6/action-download-artifact@v3
-        continue-on-error: true
-        with:
-          name: workflow-status
-          path: .github/workflow-status
-          if_no_artifact_found: warn
-
-      - name: Check changes and previous status
-        id: check
-        run: |
-          # 変更検出
-          FRONTEND_CHANGED=$(git diff --name-only HEAD^ HEAD | grep -q '^frontend/' && echo 'true' || echo 'false')
-          BACKEND_CHANGED=$(git diff --name-only HEAD^ HEAD | grep -q '^backend/' && echo 'true' || echo 'false')
-          
-          # 前回のステータスを確認（ファイルが存在しない場合は'false'とする）
-          FRONTEND_FAILED=$(test -f .github/workflow-status/frontend-failed && cat .github/workflow-status/frontend-failed || echo 'false')
-          BACKEND_FAILED=$(test -f .github/workflow-status/backend-failed && cat .github/workflow-status/backend-failed || echo 'false')
-          
-          # 変更があるまたは前回失敗している場合はチェックを実行
-          if [ "$FRONTEND_CHANGED" = "true" ] || [ "$FRONTEND_FAILED" = "true" ]; then
-            echo "frontend=true" >> $GITHUB_OUTPUT
-            echo "🔍 Frontend will be checked (Changed: $FRONTEND_CHANGED, Previous Failure: $FRONTEND_FAILED)"
-          else
-            echo "frontend=false" >> $GITHUB_OUTPUT
-            echo "⏭️ Frontend check skipped (no changes and no previous failures)"
-          fi
-          
-          if [ "$BACKEND_CHANGED" = "true" ] || [ "$BACKEND_FAILED" = "true" ]; then
-            echo "backend=true" >> $GITHUB_OUTPUT
-            echo "🔍 Backend will be checked (Changed: $BACKEND_CHANGED, Previous Failure: $BACKEND_FAILED)"
-          else
-            echo "backend=false" >> $GITHUB_OUTPUT
-            echo "⏭️ Backend check skipped (no changes and no previous failures)"
-          fi
-
-  frontend-lint:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.frontend == 'true'
+  lint:
+    needs: setup
+    name: Lint Check
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [frontend, backend]
+      # 1つのlintが失敗しても他方は実行を継続
+      fail-fast: false
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -72,12 +49,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-frontend-${{ hashFiles('frontend/bun.lockb') }}
+          key: ${{ runner.os }}-bun-${{ matrix.app }}-${{ needs.setup.outputs.cache-key }}-${{ hashFiles(format('{0}/bun.lockb', matrix.app)) }}
           restore-keys: |
-            ${{ runner.os }}-bun-frontend-
+            ${{ runner.os }}-bun-${{ matrix.app }}-${{ needs.setup.outputs.cache-key }}-
+            ${{ runner.os }}-bun-${{ matrix.app }}-
 
       - name: Install dependencies
-        working-directory: ./frontend
+        working-directory: ./${{ matrix.app }}
         run: bun install
 
       - name: Setup Biome
@@ -85,118 +63,22 @@ jobs:
         with:
           version: latest
 
-      - name: Run frontend checks
-        id: lint
-        continue-on-error: true
-        run: biome check ./frontend/src
+      - name: Run all checks
+        run: biome check ./${{ matrix.app }}/src
 
-      # チェック結果を保存
-      - name: Save frontend status
-        if: always()
-        run: |
-          mkdir -p .github/workflow-status
-          if [ "${{ steps.lint.outcome }}" = "failure" ]; then
-            echo "true" > .github/workflow-status/frontend-failed
-          else
-            echo "false" > .github/workflow-status/frontend-failed
-          fi
-
-      # 実際のジョブの成功/失敗を設定
-      - name: Set job status
-        if: steps.lint.outcome == 'failure'
-        run: exit 1
-
-  backend-lint:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.backend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      # オプション: チェック結果をPRにコメントとして追加
+      - name: Add PR Comment
+        if: github.event_name == 'pull_request' && failure()
+        uses: actions/github-script@v7
         with:
-          bun-version: latest
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-backend-${{ hashFiles('backend/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-backend-
-
-      - name: Install dependencies
-        working-directory: ./backend
-        run: bun install
-
-      - name: Setup Biome
-        uses: biomejs/setup-biome@v2
-        with:
-          version: latest
-
-      - name: Run backend checks
-        id: lint
-        continue-on-error: true
-        run: biome check ./backend/src
-
-      # チェック結果を保存
-      - name: Save backend status
-        if: always()
-        run: |
-          mkdir -p .github/workflow-status
-          if [ "${{ steps.lint.outcome }}" = "failure" ]; then
-            echo "true" > .github/workflow-status/backend-failed
-          else
-            echo "false" > .github/workflow-status/backend-failed
-          fi
-
-      # 実際のジョブの成功/失敗を設定
-      - name: Set job status
-        if: steps.lint.outcome == 'failure'
-        run: exit 1
-
-  save-status:
-    needs: [frontend-lint, backend-lint]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Upload workflow status
-        uses: actions/upload-artifact@v4
-        with:
-          name: workflow-status
-          path: .github/workflow-status/
-          retention-days: 1
-
-  summary:
-    needs: [detect-changes, frontend-lint, backend-lint]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Print workflow summary
-        run: |
-          echo "### Lint Check Summary 📊" >> $GITHUB_STEP_SUMMARY
-          
-          if [[ '${{ needs.detect-changes.outputs.frontend }}' == 'true' ]]; then
-            if [[ '${{ needs.frontend-lint.result }}' == 'success' ]]; then
-              echo "- ✅ Frontend lint check passed" >> $GITHUB_STEP_SUMMARY
-            elif [[ '${{ needs.frontend-lint.result }}' == 'failure' ]]; then
-              echo "- ❌ Frontend lint check failed" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "- ⚠️ Frontend lint check skipped or canceled" >> $GITHUB_STEP_SUMMARY
-            fi
-          else
-            echo "- ⏭️ Frontend lint check skipped (no changes and no previous failures)" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [[ '${{ needs.detect-changes.outputs.backend }}' == 'true' ]]; then
-            if [[ '${{ needs.backend-lint.result }}' == 'success' ]]; then
-              echo "- ✅ Backend lint check passed" >> $GITHUB_STEP_SUMMARY
-            elif [[ '${{ needs.backend-lint.result }}' == 'failure' ]]; then
-              echo "- ❌ Backend lint check failed" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "- ⚠️ Backend lint check skipped or canceled" >> $GITHUB_STEP_SUMMARY
-            fi
-          else
-            echo "- ⏭️ Backend lint check skipped (no changes and no previous failures)" >> $GITHUB_STEP_SUMMARY
-          fi
+          script: |
+            const output = `### ❌ ${{ matrix.app }} Lint Check Failed
+            
+            Please fix the lint issues in the ${{ matrix.app }} directory.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
