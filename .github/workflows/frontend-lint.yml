@@ -1,4 +1,4 @@
-name: Frontend Lint
+name: Frontend Code Quality
 
 on:
   push:
@@ -11,8 +11,8 @@ on:
       - '.github/workflows/frontend-lint.yml'
 
 jobs:
-  lint:
-    name: Lint Check
+  code-quality:
+    name: Code Quality Check
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -22,29 +22,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: './frontend/package-lock.json'
+          bun-version: latest
+
+      # Bunのキャッシュを設定
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install
 
       - name: Setup Biome
         uses: biomejs/setup-biome@v2
         with:
           version: latest
 
-      - name: Run lint check
-        run: biome check ./src
-
-      # オプション: フォーマットチェックも行う場合
-      - name: Run format check
-        run: biome format --check ./src
-        
-      # オプション: GitHub上でエラー箇所を可視化する場合
-      - name: Annotate Biome issues
-        if: always()
-        run: biome ci ./src
+      - name: Run all checks
+        run: bun run biome check ./src
