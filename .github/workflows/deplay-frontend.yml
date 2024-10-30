@@ -9,13 +9,36 @@ on:
       - 'frontend/**'
 
 jobs:
-  deploy:
+  verify-quality:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
+    steps:
+      - name: Check code quality status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+            
+            const workflows = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              event: 'pull_request',
+              branch: 'main'
+            });
+            
+            const qualityCheck = workflows.data.workflow_runs.find(run => 
+              run.name === 'Code Quality Check' && 
+              run.head_sha === context.payload.pull_request.head.sha
+            );
+            
+            if (!qualityCheck || qualityCheck.conclusion !== 'success') {
+              core.setFailed('Code quality checks must pass before deployment');
+            }
 
+  deploy:
+    needs: verify-quality
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,26 +49,22 @@ jobs:
           bun-version: latest
 
       - name: Install Dependencies
-        run: bun install
-        
-      - name: Check directory structure
-        run: ls -la
-        
+        run: |
+          cd frontend
+          bun install
+
       - name: Build
         run: |
-          echo "Starting build process..."
+          cd frontend
           bun run build
-          echo "Build completed"
-          ls -la dist
         env:
           NODE_ENV: production
-          CI: false
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: yusukenakanishicom
-          directory: dist
+          projectName: your-project-name
+          directory: frontend/dist
           branch: main
