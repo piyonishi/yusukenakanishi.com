@@ -1,0 +1,50 @@
+name: Frontend Lint
+
+on:
+  push:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-lint.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-lint.yml'
+
+jobs:
+  lint:
+    name: Lint Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+
+      - name: Run lint check
+        run: biome check ./src
+
+      # オプション: フォーマットチェックも行う場合
+      - name: Run format check
+        run: biome format --check ./src
+        
+      # オプション: GitHub上でエラー箇所を可視化する場合
+      - name: Annotate Biome issues
+        if: always()
+        run: biome ci ./src
