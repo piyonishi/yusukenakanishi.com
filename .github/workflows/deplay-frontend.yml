@@ -1,19 +1,16 @@
 name: Deploy Frontend to Cloudflare Pages
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'frontend/**'
   pull_request:
     types: [closed]
-    branches: [main]
+    branches:
+      - main
     paths:
       - 'frontend/**'
 
 jobs:
   deploy:
-    if: github.event.pull_request.merged == true || github.event_name == 'push'
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     defaults:
       run:
