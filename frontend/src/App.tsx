@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import viteLogo from '/vite.svg';
 import reactLogo from './assets/react.svg';
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,15 @@ import {
 
 function App() {
   const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    async function getTotalBlogs() {
+      const res = await fetch("/api/v1/posts/total-blogs")
+      const data = await res.json()
+      setCount(data.total);
+    }
+    getTotalBlogs();
+  }, []);
 
   return (
     <>

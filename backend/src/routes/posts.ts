@@ -48,6 +48,10 @@ export const postsRoute = new Hono()
       message: 'New post 🚀',
     });
   })
+  .get('/total-blogs', (c) => {
+    const totalPosts = fakePosts.length || 0;
+    return c.json({ "total": totalPosts });
+  })
   .get('/:id{[0-9]+}', (c) => {
     const id = Number.parseInt(c.req.param('id'));
     const post = fakePosts.find((post) => post.id === id);
