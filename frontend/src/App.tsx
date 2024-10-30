@@ -1,7 +1,4 @@
-import { useEffect, useState } from 'react';
-import viteLogo from '/vite.svg';
-import reactLogo from './assets/react.svg';
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -9,15 +6,18 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import viteLogo from '/vite.svg';
+import reactLogo from './assets/react.svg';
 
 function App() {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
     async function getTotalBlogs() {
-      const res = await fetch("/api/v1/posts/total-blogs")
-      const data = await res.json()
+      const res = await fetch('/api/v1/posts/total-blogs');
+      const data = await res.json();
       setCount(data.total);
     }
     getTotalBlogs();
@@ -31,10 +31,20 @@ function App() {
           <CardDescription className="flex">
             Total value of counter.
             <a href="https://vitejs.dev" target="_blank">
-              <img src={viteLogo} className="inline-block ml-2" alt="Vite logo" width={14} />
+              <img
+                src={viteLogo}
+                className="inline-block ml-2"
+                alt="Vite logo"
+                width={14}
+              />
             </a>
             <a href="https://react.dev" target="_blank">
-              <img src={reactLogo} className="inline-block ml-1" alt="React logo" width={14} />
+              <img
+                src={reactLogo}
+                className="inline-block ml-1"
+                alt="React logo"
+                width={14}
+              />
             </a>
           </CardDescription>
         </CardHeader>
@@ -45,8 +55,20 @@ function App() {
         </CardContent>
         <CardFooter>
           <div className="flex gap-3 w-full">
-            <Button size={"sm"} onClick={() => setCount((count) => count - 1)} className="w-full">DOWN</Button>
-            <Button size={"sm"} onClick={() => setCount((count) => count + 1)} className="w-full mr-1">UP</Button>
+            <Button
+              size={'sm'}
+              onClick={() => setCount((count) => count - 1)}
+              className="w-full"
+            >
+              DOWN
+            </Button>
+            <Button
+              size={'sm'}
+              onClick={() => setCount((count) => count + 1)}
+              className="w-full mr-1"
+            >
+              UP
+            </Button>
           </div>
         </CardFooter>
       </Card>

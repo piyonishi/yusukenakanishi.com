@@ -50,7 +50,7 @@ export const postsRoute = new Hono()
   })
   .get('/total-blogs', (c) => {
     const totalPosts = fakePosts.length || 0;
-    return c.json({ "total": totalPosts });
+    return c.json({ total: totalPosts });
   })
   .get('/:id{[0-9]+}', (c) => {
     const id = Number.parseInt(c.req.param('id'));
