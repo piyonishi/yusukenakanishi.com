@@ -12,6 +12,7 @@ jobs:
   setup:
     name: Setup Environment
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       cache-key: ${{ steps.cache-key.outputs.value }}
     
@@ -24,6 +25,7 @@ jobs:
     needs: setup
     name: Lint Check
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     strategy:
       matrix:
         app: [frontend, backend]
