@@ -6,6 +6,6 @@ const app = new Hono();
 
 app.use('*', logger());
 
-app.route('/api/v1', api);
+app.route('/api/v1', api;
 
 export default app;
