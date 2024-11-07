@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       cache-key: ${{ steps.cache-key.outputs.value }}
-    
+
     steps:
       - name: Generate cache key
         id: cache-key
@@ -29,12 +29,44 @@ jobs:
     strategy:
       matrix:
         app: [frontend, backend]
-      # 1つのlintが失敗しても他方は実行を継続
       fail-fast: false
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Check previous lint status and file changes
+        id: prev-lint
+        run: |
+          if git log -1 --pretty=format:%s | grep -q "${{ matrix.app }} lint failed"; then
+            echo "has_error=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_error=false" >> $GITHUB_OUTPUT
+          fi
+
+          CHANGED_FILES=$(git diff --name-only HEAD HEAD~1 | grep "^${{ matrix.app }}/")
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Process based on conditions
+        run: |
+          if [[ "${{ steps.prev-lint.outputs.has_changes }}" == "false" ]]; then
+            if [[ "${{ steps.prev-lint.outputs.has_error }}" == "true" ]]; then
+              echo "⛔ 変更ファイルはありませんが、前回の ${{ matrix.app }} のlintエラーが解決されていません。"
+              exit 1
+            else
+              echo "✅ ${{ matrix.app }} に変更ファイルがないため、チェックをスキップします。"
+              exit 0
+            fi
+          fi
+
+          # 変更ファイルがある場合は続行（lintを実行）
+          if [[ "${{ steps.prev-lint.outputs.has_error }}" == "true" ]]; then
+            echo "⚠️ 前回のlintエラーがありますが、変更があるため新しいlintチェックを実行します。"
+          fi
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -69,9 +101,9 @@ jobs:
         with:
           script: |
             const output = `### ❌ ${{ matrix.app }} Lint Check Failed
-            
+
             Please fix the lint issues in the ${{ matrix.app }} directory.`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,

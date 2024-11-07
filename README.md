@@ -1,15 +1,30 @@
-# app
+# yusukenakanishi.com
+プライベートブログのシステム構築
 
-To install dependencies:
-
-```bash
-bun install
+## root
+```
 ```
 
-To run:
+## frontend
+Cloudflare Pagesにデプロイするアプリケーション
 
-```bash
-bun run index.ts
+```
+bun run dev:frontend
 ```
 
-This project was created using `bun init` in bun v1.1.29. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+## backend
+Cloudflare WorkersにデプロイするAPI
+
+```
+bun run dev:backend
+```
+
+### lint
+```
+```
+
+### Github Actions lint
+```
+brew install actionlint
+bun run actionlint
+```

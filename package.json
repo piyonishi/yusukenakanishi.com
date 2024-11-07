@@ -20,7 +20,9 @@
     "format-backend:fix": "biome format --write ./backend",
     "check": "biome check --write .",
     "check-frontend": "biome check --write ./frontend",
-    "check-backend": "biome check --write ./backend"
+    "check-backend": "biome check --write ./backend",
+    "actionlint": "actionlint .github/workflows/*.yml",
+    "install-all": "bun install && cd frontend && bun install && cd ../backend && bun install"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.3",
