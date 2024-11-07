@@ -39,6 +39,7 @@ jobs:
 
       - name: Check previous lint status and file changes
         id: prev-lint
+        shell: bash
         run: |
           if git log -1 --pretty=format:%s | grep -q "${{ matrix.app }} lint failed"; then
             echo "has_error=true" >> $GITHUB_OUTPUT
