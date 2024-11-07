@@ -1,6 +1,10 @@
 name: Deploy Frontend to Cloudflare Pages
 
 on:
+  workflow_run:
+    workflows: ["Code Quality Check"]
+    types:
+      - completed
   push:
     branches:
       - develop
@@ -10,7 +14,10 @@ on:
 
 jobs:
   deploy:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event_name == 'push' &&
+      (github.event.workflow_run.head_branch == 'develop' || github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     defaults:
