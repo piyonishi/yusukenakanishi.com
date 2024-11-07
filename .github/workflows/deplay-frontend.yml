@@ -1,8 +1,7 @@
 name: Deploy Frontend to Cloudflare Pages
 
 on:
-  pull_request:
-    types: [closed]
+  push:
     branches:
       - develop
     paths:
