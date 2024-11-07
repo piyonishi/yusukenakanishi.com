@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [closed]
     branches:
-      - main
+      - develop
     paths:
       - 'frontend/**'
 
@@ -28,10 +28,10 @@ jobs:
 
       - name: Install Dependencies
         run: bun install
-        
+
       - name: Check directory structure
         run: ls -la
-        
+
       - name: Build
         run: |
           echo "Starting build process..."
@@ -49,4 +49,4 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: yusukenakanishicom
           directory: dist
-          branch: main
+          branch: develop
