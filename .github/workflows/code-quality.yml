@@ -47,7 +47,7 @@ jobs:
             echo "has_error=false" >> $GITHUB_OUTPUT
           fi
 
-          CHANGED_FILES=$(git diff --name-only HEAD HEAD~1 | grep "^${{ matrix.app }}/")
+          CHANGED_FILES=$(git diff --name-only HEAD HEAD~1 | grep "^${{ matrix.app }}/" || true)
           if [ -z "$CHANGED_FILES" ]; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
