@@ -27,7 +27,7 @@ function App() {
   return (
     <>
       <Card className="w-[580px] m-auto">
-        <CardHeader>
+        <CardHeader
           <CardTitle>Total value</CardTitle>
           <CardDescription className="flex">
             Total value of counter.
