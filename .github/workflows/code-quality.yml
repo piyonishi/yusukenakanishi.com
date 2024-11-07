@@ -1,0 +1,115 @@
+name: Code Quality Check
+
+on:
+  push:
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'biome.json'
+      - '.github/workflows/code-quality.yml'
+
+jobs:
+  setup:
+    name: Setup Environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.value }}
+
+    steps:
+      - name: Generate cache key
+        id: cache-key
+        run: echo "value=$(date -u '+%Y-%m')" >> $GITHUB_OUTPUT
+
+  lint:
+    needs: setup
+    name: Lint Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        app: [frontend, backend]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check previous lint status and file changes
+        id: prev-lint
+        shell: bash
+        run: |
+          if git log -1 --pretty=format:%s | grep -q "${{ matrix.app }} lint failed"; then
+            echo "has_error=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_error=false" >> $GITHUB_OUTPUT
+          fi
+
+          CHANGED_FILES=$(git diff --name-only HEAD HEAD~1 | grep "^${{ matrix.app }}/" || true)
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Process based on conditions
+        run: |
+          if [[ "${{ steps.prev-lint.outputs.has_changes }}" == "false" ]]; then
+            if [[ "${{ steps.prev-lint.outputs.has_error }}" == "true" ]]; then
+              echo "⛔ 変更ファイルはありませんが、前回の ${{ matrix.app }} のlintエラーが解決されていません。"
+              exit 1
+            else
+              echo "✅ ${{ matrix.app }} に変更ファイルがないため、チェックをスキップします。"
+              exit 0
+            fi
+          fi
+
+          # 変更ファイルがある場合は続行（lintを実行）
+          if [[ "${{ steps.prev-lint.outputs.has_error }}" == "true" ]]; then
+            echo "⚠️ 前回のlintエラーがありますが、変更があるため新しいlintチェックを実行します。"
+          fi
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ matrix.app }}-${{ needs.setup.outputs.cache-key }}-${{ hashFiles(format('{0}/bun.lockb', matrix.app)) }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ matrix.app }}-${{ needs.setup.outputs.cache-key }}-
+            ${{ runner.os }}-bun-${{ matrix.app }}-
+
+      - name: Install dependencies
+        working-directory: ./${{ matrix.app }}
+        run: bun install
+
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+
+      - name: Run all checks
+        run: biome check ./${{ matrix.app }}/src
+
+      # オプション: チェック結果をPRにコメントとして追加
+      - name: Add PR Comment
+        if: github.event_name == 'pull_request' && failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `### ❌ ${{ matrix.app }} Lint Check Failed
+
+            Please fix the lint issues in the ${{ matrix.app }} directory.`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
