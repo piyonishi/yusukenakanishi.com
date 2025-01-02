@@ -1,0 +1,36 @@
+{
+  "name": "yusukenakanishi.com",
+  "version": "0.1.0",
+  "private": true,
+  "description": "My personal blog project",
+  "workspaces": ["frontend", "backend"],
+  "scripts": {
+    "dev:frontend": "bun run --cwd frontend dev",
+    "dev:backend": "bun run --cwd backend dev",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "lint:frontend": "biome lint frontend",
+    "lint:frontend:fix": "biome lint --write frontend",
+    "lint:backend": "biome lint backend",
+    "lint:backend:fix": "biome lint --write backend",
+    "format": "biome format .",
+    "format:fix": "biome format --write .",
+    "format:frontend": "biome format frontend",
+    "format:frontend:fix": "biome format --write frontend",
+    "format:backend": "biome format backend",
+    "format:backend:fix": "biome format --write backend",
+    "check": "biome check --write .",
+    "check:frontend": "biome check --write frontend",
+    "check:backend": "biome check --write backend",
+    "validate": "bun run lint && bun run format && bun run check",
+    "actionlint": "actionlint .github/workflows/*.yml",
+    "setup": "bun install"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.3",
+    "@types/bun": "latest"
+  },
+  "engines": {
+    "bun": "^1.1.32"
+  }
+}
